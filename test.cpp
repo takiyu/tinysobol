@@ -1,3 +1,4 @@
+#define TINY_SOBOL_IMPLEMENTATION
 #include "tinysobol.h"
 
 #include <set>

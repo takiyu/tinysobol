@@ -27,17 +27,21 @@ class Sobol {
 public:
     Sobol();
     Sobol(size_t dim, size_t sample_size, uint64_t seed = 0);
+    Sobol(size_t dim, const std::vector<size_t>& sample_sizes,
+          uint64_t seed = 0);
     ~Sobol();
 
     bool init(size_t dim, size_t sample_size, uint64_t seed = 0);
+    bool init(size_t dim, const std::vector<size_t>& sample_sizes,
+              uint64_t seed = 0);
     bool next(std::vector<uint64_t>& sample);
 
 private:
     uint64_t m_v[DIM_MAX][LOG_MAX];
     uint64_t m_recipd_denom;
     size_t m_dim;
-    size_t m_sample_size;
-    size_t m_sample_size_actual;
+    std::vector<size_t> m_sample_sizes;
+    std::vector<size_t> m_sample_sizes_actual;
     uint64_t m_seed;
     std::vector<uint64_t> m_lastq;
 };
@@ -47,6 +51,7 @@ private:
 // **************************** Begin of Definitions ***************************
 // *****************************************************************************
 // *****************************************************************************
+#ifdef TINY_SOBOL_IMPLEMENTATION
 
 namespace {
 
@@ -165,16 +170,36 @@ Sobol::Sobol(size_t dim, size_t sample_size, uint64_t seed) {
     init(dim, sample_size, seed);
 }
 
+Sobol::Sobol(size_t dim, const std::vector<size_t>& sample_sizes,
+             uint64_t seed) {
+    init(dim, sample_sizes, seed);
+}
+
 Sobol::~Sobol() {}
 
 bool Sobol::init(size_t dim, size_t sample_size, uint64_t seed) {
+    std::vector<size_t> sample_sizes(dim);
+    for (size_t i = 0; i < dim; i++) {
+        sample_sizes[i] = sample_size;
+    }
+    return init(dim, sample_sizes, seed);
+}
+
+bool Sobol::init(size_t dim, const std::vector<size_t>& sample_sizes,
+                 uint64_t seed) {
     if (DIM_MAX < dim) {
         std::cerr << "Input dimension is too high" << std::endl;
         return false;
     }
-    if (sample_size == 0) {
-        std::cerr << "Invalid sample size" << std::endl;
+    if (sample_sizes.size() != dim) {
+        std::cerr << "Invalid sample size dimension" << std::endl;
         return false;
+    }
+    for (size_t i = 0; i < sample_sizes.size(); i++) {
+        if (sample_sizes[i] == 0) {
+            std::cerr << "Invalid sample size (0)" << std::endl;
+            return false;
+        }
     }
 
     // Initialize m_v
@@ -219,8 +244,11 @@ bool Sobol::init(size_t dim, size_t sample_size, uint64_t seed) {
     m_recipd_denom = 2 * l;
 
     m_dim = dim;
-    m_sample_size = 1 << i4_bit_hi1(sample_size);
-    m_sample_size_actual = sample_size;
+    m_sample_sizes.resize(sample_sizes.size());
+    for (size_t i = 0; i < sample_sizes.size(); i++) {
+        m_sample_sizes[i] = 1 << i4_bit_hi1(sample_sizes[i]);
+    }
+    m_sample_sizes_actual = sample_sizes;
     m_seed = seed;
 
     if (seed == 0) {
@@ -248,8 +276,9 @@ bool Sobol::next(std::vector<uint64_t>& sample) {
         sample.resize(m_dim);
         bool success = true;
         for (size_t i = 1; i < m_dim + 1; i++) {
-            uint64_t s = m_lastq[i - 1] * m_sample_size / m_recipd_denom;
-            if (m_sample_size_actual < s) {
+            uint64_t s =
+                    m_lastq[i - 1] * m_sample_sizes[i - 1] / m_recipd_denom;
+            if (m_sample_sizes_actual[i - 1] < s) {
                 success = false;
             }
             sample[i - 1] = s;
@@ -262,6 +291,8 @@ bool Sobol::next(std::vector<uint64_t>& sample) {
 
     return true;
 }
+
+#endif /* end of implementation guard */
 
 }  // namespace tinysobol
 
