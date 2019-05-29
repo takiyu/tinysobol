@@ -37,6 +37,7 @@ private:
     uint64_t m_recipd_denom;
     size_t m_dim;
     size_t m_sample_size;
+    size_t m_sample_size_actual;
     uint64_t m_seed;
     std::vector<uint64_t> m_lastq;
 };
@@ -171,6 +172,10 @@ bool Sobol::init(size_t dim, size_t sample_size, uint64_t seed) {
         std::cerr << "Input dimension is too high" << std::endl;
         return false;
     }
+    if (sample_size == 0) {
+        std::cerr << "Invalid sample size" << std::endl;
+        return false;
+    }
 
     // Initialize m_v
     for (size_t i = 0; i < DIM_MAX; i++) {
@@ -214,7 +219,8 @@ bool Sobol::init(size_t dim, size_t sample_size, uint64_t seed) {
     m_recipd_denom = 2 * l;
 
     m_dim = dim;
-    m_sample_size = sample_size;
+    m_sample_size = 1 << i4_bit_hi1(sample_size);
+    m_sample_size_actual = sample_size;
     m_seed = seed;
 
     if (seed == 0) {
@@ -232,16 +238,26 @@ bool Sobol::init(size_t dim, size_t sample_size, uint64_t seed) {
 }
 
 bool Sobol::next(std::vector<uint64_t>& sample) {
-    size_t l = i4_bit_lo0(m_seed);
-    if (LOG_MAX < l) {
-        return false;
-    }
-    m_seed++;
+    while (true) {
+        size_t l = i4_bit_lo0(m_seed);
+        if (LOG_MAX < l) {
+            return false;
+        }
+        m_seed++;
 
-    sample.resize(m_dim);
-    for (size_t i = 1; i < m_dim + 1; i++) {
-        sample[i - 1] = m_lastq[i - 1] * m_sample_size / m_recipd_denom;
-        m_lastq[i - 1] ^= m_v[i - 1][l - 1];
+        sample.resize(m_dim);
+        bool success = true;
+        for (size_t i = 1; i < m_dim + 1; i++) {
+            uint64_t s = m_lastq[i - 1] * m_sample_size / m_recipd_denom;
+            if (m_sample_size_actual < s) {
+                success = false;
+            }
+            sample[i - 1] = s;
+            m_lastq[i - 1] ^= m_v[i - 1][l - 1];
+        }
+        if (success) {
+            break;
+        }
     }
 
     return true;

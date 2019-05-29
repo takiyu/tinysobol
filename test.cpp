@@ -16,7 +16,7 @@ int main(int argc, char const* argv[]) {
 
     // Create Sobol instance
     const size_t DIM = 3;
-    const size_t SAMPLE_SIZE = 128;  // No overlap, if the size is pow of 2.
+    const size_t SAMPLE_SIZE = 100;
     tinysobol::Sobol sobol(DIM, SAMPLE_SIZE);
 
     std::set<std::string> histroy;
