@@ -251,8 +251,8 @@ bool Sobol::init(size_t dim, const std::vector<size_t>& sample_sizes,
     m_sample_sizes_actual = sample_sizes;
     m_seed = seed;
 
+    m_lastq = std::vector<uint64_t>(m_dim, 0);
     if (seed == 0) {
-        m_lastq = std::vector<uint64_t>(m_dim, 0);
     } else {
         for (uint64_t seed_tmp = 0; seed_tmp < seed; seed_tmp++) {
             uint64_t l = i4_bit_lo0(seed_tmp);
