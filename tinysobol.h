@@ -28,23 +28,23 @@ using VGrid = std::array<std::array<uint64_t, LOG_MAX>, DIM_MAX>;  // [DIM][LOG]
 
 class Sobol {
 public:
-    Sobol(uint64_t dim, uint64_t n_sample, uint64_t seed = 0);
-    Sobol(uint64_t dim, const std::vector<uint64_t>& n_samples,
-          uint64_t seed = 0);
+    Sobol(uint32_t dim, uint32_t n_sample, uint32_t seed = 0);
+    Sobol(uint32_t dim, const std::vector<uint32_t>& n_samples,
+          uint32_t seed = 0);
 
-    const std::vector<uint64_t>& next();
-    const std::vector<uint64_t>& getLastSample() const;
+    const std::vector<uint32_t>& next();
+    const std::vector<uint32_t>& getLastSample() const;
 
 private:
     const uint64_t DIM;
     const VGrid V_GRID;
     const uint64_t RECIPD_DENOM;
     const std::vector<uint64_t> N_SAMPLES_2BASE;
-    const std::vector<uint64_t> N_SAMPLES;
+    const std::vector<uint32_t> N_SAMPLES;
 
     uint64_t m_seed;
     std::vector<uint64_t> m_last_q;
-    std::vector<uint64_t> m_last_sample;
+    std::vector<uint32_t> m_last_sample;
 
     void nextImpl();
     bool isValidSample();
@@ -212,15 +212,11 @@ VGrid GenVGrid(uint64_t dim) {
 }
 
 constexpr uint64_t GenRecipdDenom() {
-    uint64_t l = 1;
-    for (uint64_t j = LOG_MAX - 1; 0 < j; j--) {
-        l <<= 1;
-    }
-    return 2 * l;
+    return 1u << LOG_MAX;
 }
 
 std::vector<uint64_t> GenSampleSizes2Base(
-        const std::vector<uint64_t>& n_samples) {
+        const std::vector<uint32_t>& n_samples) {
     std::vector<uint64_t> n_samples_2base;
     n_samples_2base.reserve(n_samples.size());
     for (uint64_t i = 0; i < n_samples.size(); i++) {
@@ -231,11 +227,11 @@ std::vector<uint64_t> GenSampleSizes2Base(
 
 }  // namespace
 
-Sobol::Sobol(uint64_t dim, uint64_t n_sample, uint64_t seed)
-    : Sobol(dim, std::vector<uint64_t>(dim, n_sample), seed) {}
+Sobol::Sobol(uint32_t dim, uint32_t n_sample, uint32_t seed)
+    : Sobol(dim, std::vector<uint32_t>(dim, n_sample), seed) {}
 
-Sobol::Sobol(uint64_t dim, const std::vector<uint64_t>& n_samples,
-             uint64_t seed)
+Sobol::Sobol(uint32_t dim, const std::vector<uint32_t>& n_samples,
+             uint32_t seed)
     : DIM(dim),
       V_GRID(GenVGrid(dim)),
       RECIPD_DENOM(GenRecipdDenom()),
@@ -243,7 +239,7 @@ Sobol::Sobol(uint64_t dim, const std::vector<uint64_t>& n_samples,
       N_SAMPLES_2BASE(GenSampleSizes2Base(n_samples)),
       m_seed(0),
       m_last_q(dim, 0),
-      m_last_sample(dim, ~uint64_t(0)) {
+      m_last_sample(dim, ~uint32_t(0)) {
     if (DIM_MAX < DIM) {
         throw std::runtime_error("Input dimension is too high");
     }
@@ -263,7 +259,7 @@ Sobol::Sobol(uint64_t dim, const std::vector<uint64_t>& n_samples,
     assert(seed == m_seed);
 }
 
-const std::vector<uint64_t>& Sobol::next() {
+const std::vector<uint32_t>& Sobol::next() {
     // Sobol supports only 2^n. If sample is not, it should sample again
     while (true) {
         nextImpl();
@@ -274,7 +270,7 @@ const std::vector<uint64_t>& Sobol::next() {
     return m_last_sample;
 }
 
-const std::vector<uint64_t>& Sobol::getLastSample() const {
+const std::vector<uint32_t>& Sobol::getLastSample() const {
     return m_last_sample;
 }
 
@@ -289,7 +285,7 @@ void Sobol::nextImpl() {
 
     for (uint64_t i = 0; i < DIM; i++) {
         uint64_t s = m_last_q[i] * N_SAMPLES_2BASE[i] / RECIPD_DENOM;
-        m_last_sample[i] = s;
+        m_last_sample[i] = static_cast<uint32_t>(s);
         m_last_q[i] ^= V_GRID[i][l];
     }
 }
