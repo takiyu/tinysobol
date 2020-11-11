@@ -220,7 +220,7 @@ std::vector<uint64_t> GenSampleSizes2Base(
     std::vector<uint64_t> n_samples_2base;
     n_samples_2base.reserve(n_samples.size());
     for (uint64_t i = 0; i < n_samples.size(); i++) {
-        n_samples_2base.push_back(1 << GetHighestBitPos(n_samples[i]));
+        n_samples_2base.push_back(1 << (GetHighestBitPos(n_samples[i]) + 1));
     }
     return n_samples_2base;
 }
