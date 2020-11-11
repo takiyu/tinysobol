@@ -1,7 +1,9 @@
 #define TINY_SOBOL_IMPLEMENTATION
+#include <atomic>
 #include <cassert>
 #include <set>
 #include <sstream>
+#include <thread>
 
 #include "tinysobol.h"
 
@@ -56,24 +58,35 @@ bool CheckSobolNoOverlap(uint32_t dim, uint32_t n_sample,
     return overlapped_cnt == overlap_offset;
 }
 
+void PrintDimNSample(uint32_t dim, uint32_t n_sample, const std::string& msg) {
+    std::cout << "Dim:" << dim << ", n_sample:" << n_sample << "  >> " << msg
+              << std::endl;
+}
+
 int main(int argc, char const* argv[]) {
 #if 0
     // Single check
     CheckSobolNoOverlap(3, 1024);
 #else
-    // Check Sobol for each dimension and the number of samples
+    // Check all combinations
+    const uint32_t N_THREADS = std::thread::hardware_concurrency();
     for (uint32_t dim = 1; dim < 4; dim++) {
-        std::cout << "Dim: " << dim << std::endl;
-        uint32_t n_sample = 1;
-        while (n_sample <= 1024) {
-            std::cout << "  n_sample:" << n_sample << std::endl;
-            const bool ret = CheckSobolNoOverlap<false>(dim, n_sample);
-            if (ret) {
-                std::cout << "    Passed" << std::endl;
-            } else {
-                std::cout << "    Has overlap" << std::endl;
-            }
-            n_sample <<= 1;
+        std::atomic<uint32_t> n_sample = {1};
+        std::vector<std::thread> threads;
+        for (uint32_t t_idx = 0; t_idx < N_THREADS; t_idx++) {
+            threads.emplace_back([&]() {
+                while (n_sample++ <= 1024) {
+                    const bool ret = CheckSobolNoOverlap<false>(dim, n_sample);
+                    if (ret) {
+                        PrintDimNSample(dim, n_sample, "Passed");
+                    } else {
+                        PrintDimNSample(dim, n_sample, "Has invalid overlap");
+                    }
+                }
+            });
+        }
+        for (auto&& thread : threads) {
+            thread.join();
         }
     }
 #endif
