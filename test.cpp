@@ -1,36 +1,33 @@
 #define TINY_SOBOL_IMPLEMENTATION
-#include "tinysobol.h"
-
+#include <cassert>
 #include <set>
 #include <sstream>
-#include <cassert>
 
-size_t pow(size_t v, size_t n) {
+#include "tinysobol.h"
+
+uint64_t Pow(uint64_t v, uint64_t n) {
     if (n == 1) {
         return v;
     } else {
-        return pow(v, n - 1) * v;
+        return Pow(v, n - 1) * v;
     }
 }
 
 int main(int argc, char const* argv[]) {
-
     // Create Sobol instance
-    const size_t DIM = 3;
-    const size_t SAMPLE_SIZE = 100;
+    const uint64_t DIM = 2;
+    const uint64_t SAMPLE_SIZE = 4;
     tinysobol::Sobol sobol(DIM, SAMPLE_SIZE);
 
     std::set<std::string> histroy;
 
-    std::vector<uint64_t> sample;
-    for (size_t cnt = 0; cnt < pow(SAMPLE_SIZE, DIM); cnt++) {
+    for (uint64_t cnt = 0; cnt < Pow(SAMPLE_SIZE, DIM) + 10; cnt++) {
         // Sample
-        bool ret = sobol.next(sample);
-        assert(ret);
+        const std::vector<uint64_t>& sample = sobol.next();
 
         // Value check
         std::stringstream ss;
-        for (size_t i = 0; i < sample.size(); i++) {
+        for (uint64_t i = 0; i < sample.size(); i++) {
             ss << sample[i] << " ";
         }
         if (histroy.count(ss.str())) {
