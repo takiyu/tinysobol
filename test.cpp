@@ -1,11 +1,11 @@
 #define TINY_SOBOL_IMPLEMENTATION
+#include "tinysobol.h"
+
 #include <atomic>
 #include <cassert>
 #include <set>
 #include <sstream>
 #include <thread>
-
-#include "tinysobol.h"
 
 uint64_t Pow(uint64_t v, uint64_t n) {
     if (n == 1) {
@@ -70,7 +70,7 @@ int main(int argc, char const* argv[]) {
     std::cout << ret << std::endl;
 #else
     // Check all combinations
-    const uint32_t N_THREADS = std::thread::hardware_concurrency();
+    const uint32_t N_THREADS = std::thread::hardware_concurrency() - 1;
     const uint32_t N_DIM_MAX = 10;
     const uint32_t N_SAMPLE_SHIFT_MAX = 12;
     std::atomic<uint32_t> idx_pool = {1};

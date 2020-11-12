@@ -14,6 +14,7 @@
 #include <cassert>
 #include <cstdint>
 #include <exception>
+#include <initializer_list>
 #include <iostream>
 #include <vector>
 
@@ -29,6 +30,7 @@ using VGrid = std::array<std::array<uint32_t, LOG_MAX>, DIM_MAX>;  // [DIM][LOG]
 class Sobol {
 public:
     Sobol(uint32_t dim, uint32_t n_sample, uint32_t seed = 0);
+    Sobol(const std::initializer_list<uint32_t>& n_samples, uint32_t seed = 0);
     Sobol(const std::vector<uint32_t>& n_samples, uint32_t seed = 0);
 
     const std::vector<uint32_t>& next();
@@ -224,8 +226,10 @@ std::vector<uint32_t> GenSampleSizesShift(
 Sobol::Sobol(uint32_t dim, uint32_t n_sample, uint32_t seed)
     : Sobol(std::vector<uint32_t>(dim, n_sample), seed) {}
 
-Sobol::Sobol(const std::vector<uint32_t>& n_samples,
-             uint32_t seed)
+Sobol::Sobol(const std::initializer_list<uint32_t>& n_samples, uint32_t seed)
+    : Sobol(std::vector<uint32_t>(n_samples), seed) {}
+
+Sobol::Sobol(const std::vector<uint32_t>& n_samples, uint32_t seed)
     : DIM(static_cast<uint32_t>(n_samples.size())),
       V_GRID(GenVGrid(DIM)),
       N_SAMPLES(n_samples),
