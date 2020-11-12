@@ -7,7 +7,7 @@
 
 #include "tinysobol.h"
 
-uint32_t Pow(uint32_t v, uint32_t n) {
+uint64_t Pow(uint64_t v, uint64_t n) {
     if (n == 1) {
         return v;
     } else {
@@ -37,7 +37,7 @@ bool CheckSobolNoOverlap(uint32_t dim, uint32_t n_sample,
     // Sampling loop
     std::set<std::vector<uint32_t>> sample_histroy;
     uint32_t overlapped_cnt = 0;
-    for (uint32_t idx = 0; idx < Pow(n_sample, dim) + overlap_offset; idx++) {
+    for (uint64_t idx = 0; idx < Pow(n_sample, dim) + overlap_offset; idx++) {
         // Sample
         const std::vector<uint32_t>& sample = sobol.next();
 
@@ -66,28 +66,33 @@ void PrintDimNSample(uint32_t dim, uint32_t n_sample, const std::string& msg) {
 int main(int argc, char const* argv[]) {
 #if 0
     // Single check
-    CheckSobolNoOverlap(3, 1024);
+    bool ret = CheckSobolNoOverlap(3, 1024 * 2);
+    std::cout << ret << std::endl;
 #else
     // Check all combinations
     const uint32_t N_THREADS = std::thread::hardware_concurrency();
-    for (uint32_t dim = 1; dim < 4; dim++) {
-        std::atomic<uint32_t> n_sample = {1};
-        std::vector<std::thread> threads;
-        for (uint32_t t_idx = 0; t_idx < N_THREADS; t_idx++) {
-            threads.emplace_back([&]() {
-                while (n_sample++ <= 1024) {
-                    const bool ret = CheckSobolNoOverlap<false>(dim, n_sample);
-                    if (ret) {
-                        PrintDimNSample(dim, n_sample, "Passed");
-                    } else {
-                        PrintDimNSample(dim, n_sample, "Has invalid overlap");
-                    }
+    const uint32_t N_DIM_MAX = 10;
+    const uint32_t N_SAMPLE_SHIFT_MAX = 12;
+    std::atomic<uint32_t> idx_pool = {1};
+    std::vector<std::thread> threads;
+    for (uint32_t t_idx = 0; t_idx < N_THREADS; t_idx++) {
+        threads.emplace_back([&]() {
+            uint32_t idx = 0;
+            while ((idx = idx_pool++) <= N_DIM_MAX * N_SAMPLE_SHIFT_MAX) {
+                uint32_t dim = (idx / N_SAMPLE_SHIFT_MAX) + 1;
+                uint32_t n_sample_shift = idx % N_SAMPLE_SHIFT_MAX;
+                uint32_t n_sample = 1 << n_sample_shift;
+                const bool ret = CheckSobolNoOverlap<false>(dim, n_sample);
+                if (ret) {
+                    PrintDimNSample(dim, n_sample, "Passed");
+                } else {
+                    PrintDimNSample(dim, n_sample, "Has invalid overlap");
                 }
-            });
-        }
-        for (auto&& thread : threads) {
-            thread.join();
-        }
+            }
+        });
+    }
+    for (auto&& thread : threads) {
+        thread.join();
     }
 #endif
 

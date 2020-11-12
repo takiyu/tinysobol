@@ -22,28 +22,26 @@ namespace tinysobol {
 // -----------------------------------------------------------------------------
 // ----------------------------------- Sobol -----------------------------------
 // -----------------------------------------------------------------------------
-static constexpr uint64_t DIM_MAX = 40;
-static constexpr uint64_t LOG_MAX = 30;
-using VGrid = std::array<std::array<uint64_t, LOG_MAX>, DIM_MAX>;  // [DIM][LOG]
+static constexpr uint32_t DIM_MAX = 40;
+static constexpr uint32_t LOG_MAX = 30;
+using VGrid = std::array<std::array<uint32_t, LOG_MAX>, DIM_MAX>;  // [DIM][LOG]
 
 class Sobol {
 public:
     Sobol(uint32_t dim, uint32_t n_sample, uint32_t seed = 0);
-    Sobol(uint32_t dim, const std::vector<uint32_t>& n_samples,
-          uint32_t seed = 0);
+    Sobol(const std::vector<uint32_t>& n_samples, uint32_t seed = 0);
 
     const std::vector<uint32_t>& next();
     const std::vector<uint32_t>& getLastSample() const;
 
 private:
-    const uint64_t DIM;
+    const uint32_t DIM;
     const VGrid V_GRID;
-    const uint64_t RECIPD_DENOM;
-    const std::vector<uint64_t> N_SAMPLES_2BASE;
+    const std::vector<uint32_t> N_SAMPLES_SHIFT;
     const std::vector<uint32_t> N_SAMPLES;
 
-    uint64_t m_seed;
-    std::vector<uint64_t> m_last_q;
+    uint32_t m_seed;
+    std::vector<uint32_t> m_last_q;
     std::vector<uint32_t> m_last_sample;
 
     void nextImpl();
@@ -59,9 +57,9 @@ private:
 
 namespace {
 
-uint64_t GetHighestBitPos(uint64_t n) {
+uint32_t GetHighestBitPos(uint32_t n) {
     // Returns the position of the high 1 bit base 2 in an integer.
-    uint64_t bit = 0;
+    uint32_t bit = 0;
     while (n > 0) {
         bit++;
         n >>= 1;
@@ -69,17 +67,17 @@ uint64_t GetHighestBitPos(uint64_t n) {
     return bit;
 }
 
-uint64_t GetLowestBitPos(uint64_t n) {
+uint32_t GetLowestBitPos(uint32_t n) {
     // Returns the position of the low 0 bit base 2 in an integer.
-    uint64_t bit = 1;
-    while (n != (n & (~uint64_t(1)))) {
+    uint32_t bit = 1;
+    while (n != (n & (~uint32_t(1)))) {
         bit++;
         n >>= 1;
     }
     return bit;
 }
 
-constexpr uint64_t V_TMPL[DIM_MAX][LOG_MAX] = {
+constexpr uint32_t V_TMPL[DIM_MAX][LOG_MAX] = {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
          1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -161,36 +159,36 @@ constexpr uint64_t V_TMPL[DIM_MAX][LOG_MAX] = {
         {1, 3, 3, 9, 9, 25, 107, 39, 0, 0, 0, 0, 0, 0, 0,
          0, 0, 0, 0, 0, 0,  0,   0,  0, 0, 0, 0, 0, 0, 0}};
 
-constexpr uint64_t POLY[DIM_MAX] = {
+constexpr uint32_t POLY[DIM_MAX] = {
         1,   3,   7,   11,  13,  19,  25,  37,  59,  47,  61,  55,  41,  67,
         97,  91,  109, 103, 115, 131, 193, 137, 145, 143, 241, 157, 185, 167,
         229, 171, 213, 191, 253, 203, 211, 239, 247, 285, 369, 299};
 
-VGrid GenVGrid(uint64_t dim) {
+VGrid GenVGrid(uint32_t dim) {
     // Initialize V_GRID
     VGrid v_grid;
 
-    for (uint64_t i = 0; i < DIM_MAX; i++) {
-        for (uint64_t j = 0; j < LOG_MAX; j++) {
+    for (uint32_t i = 0; i < DIM_MAX; i++) {
+        for (uint32_t j = 0; j < LOG_MAX; j++) {
             v_grid[i][j] = V_TMPL[i][j];
         }
     }
-    for (uint64_t i = 2; i < dim + 1; i++) {
-        const uint64_t m = GetHighestBitPos(POLY[i - 1] >> 1);
+    for (uint32_t i = 2; i < dim + 1; i++) {
+        const uint32_t m = GetHighestBitPos(POLY[i - 1] >> 1);
 
-        std::vector<uint64_t> inc(m);
+        std::vector<uint32_t> inc(m);
         {
-            uint64_t j = POLY[i - 1];
-            for (uint64_t k = m; 0 < k; k--) {
-                inc[k - 1] = (j != (j & (~uint64_t(1))));
+            uint32_t j = POLY[i - 1];
+            for (uint32_t k = m; 0 < k; k--) {
+                inc[k - 1] = (j != (j & (~uint32_t(1))));
                 j >>= 1;
             }
         }
 
-        for (uint64_t j = m + 1; j < LOG_MAX + 1; j++) {
-            uint64_t newv = v_grid[i - 1][j - m - 1];
-            uint64_t l = 1;
-            for (uint64_t k = 1; k < m + 1; k++) {
+        for (uint32_t j = m + 1; j < LOG_MAX + 1; j++) {
+            uint32_t newv = v_grid[i - 1][j - m - 1];
+            uint32_t l = 1;
+            for (uint32_t k = 1; k < m + 1; k++) {
                 l <<= 1;
                 if (inc[k - 1]) {
                     newv ^= l * v_grid[i - 1][j - k - 1];
@@ -200,10 +198,10 @@ VGrid GenVGrid(uint64_t dim) {
         }
     }
 
-    uint64_t l = 1;
-    for (uint64_t j = LOG_MAX - 1; 0 < j; j--) {
+    uint32_t l = 1;
+    for (uint32_t j = LOG_MAX - 1; 0 < j; j--) {
         l <<= 1;
-        for (uint64_t k = 0; k < dim; k++) {
+        for (uint32_t k = 0; k < dim; k++) {
             v_grid[k][j - 1] *= l;
         }
     }
@@ -211,49 +209,41 @@ VGrid GenVGrid(uint64_t dim) {
     return v_grid;
 }
 
-constexpr uint64_t GenRecipdDenom() {
-    return 1u << LOG_MAX;
-}
-
-std::vector<uint64_t> GenSampleSizes2Base(
+std::vector<uint32_t> GenSampleSizesShift(
         const std::vector<uint32_t>& n_samples) {
-    std::vector<uint64_t> n_samples_2base;
-    n_samples_2base.reserve(n_samples.size());
-    for (uint64_t i = 0; i < n_samples.size(); i++) {
-        n_samples_2base.push_back(1 << (GetHighestBitPos(n_samples[i]) + 1));
+    std::vector<uint32_t> n_samples_shift;
+    n_samples_shift.reserve(n_samples.size());
+    for (uint32_t i = 0; i < n_samples.size(); i++) {
+        n_samples_shift.push_back(GetHighestBitPos(n_samples[i]));
     }
-    return n_samples_2base;
+    return n_samples_shift;
 }
 
 }  // namespace
 
 Sobol::Sobol(uint32_t dim, uint32_t n_sample, uint32_t seed)
-    : Sobol(dim, std::vector<uint32_t>(dim, n_sample), seed) {}
+    : Sobol(std::vector<uint32_t>(dim, n_sample), seed) {}
 
-Sobol::Sobol(uint32_t dim, const std::vector<uint32_t>& n_samples,
+Sobol::Sobol(const std::vector<uint32_t>& n_samples,
              uint32_t seed)
-    : DIM(dim),
-      V_GRID(GenVGrid(dim)),
-      RECIPD_DENOM(GenRecipdDenom()),
+    : DIM(static_cast<uint32_t>(n_samples.size())),
+      V_GRID(GenVGrid(DIM)),
       N_SAMPLES(n_samples),
-      N_SAMPLES_2BASE(GenSampleSizes2Base(n_samples)),
+      N_SAMPLES_SHIFT(GenSampleSizesShift(n_samples)),
       m_seed(0),
-      m_last_q(dim, 0),
-      m_last_sample(dim, ~uint32_t(0)) {
+      m_last_q(DIM, 0),
+      m_last_sample(DIM, ~uint32_t(0)) {
     if (DIM_MAX < DIM) {
         throw std::runtime_error("Input dimension is too high");
     }
-    if (N_SAMPLES_2BASE.size() != DIM) {
-        throw std::runtime_error("Invalid sample size dimension");
-    }
-    for (uint64_t i = 0; i < N_SAMPLES_2BASE.size(); i++) {
-        if (N_SAMPLES_2BASE[i] == 0) {
+    for (uint32_t i = 0; i < N_SAMPLES_SHIFT.size(); i++) {
+        if (N_SAMPLES_SHIFT[i] == 0) {
             throw std::runtime_error("Invalid sample size (0)");
         }
     }
 
     // Increment the seed
-    for (uint64_t seed_tmp = 0; seed_tmp < seed; seed_tmp++) {
+    for (uint32_t seed_tmp = 0; seed_tmp < seed; seed_tmp++) {
         nextImpl();
     }
     assert(seed == m_seed);
@@ -266,6 +256,7 @@ const std::vector<uint32_t>& Sobol::next() {
         if (isValidSample()) {
             break;
         }
+        std::cout << "invalid sample" << std::endl;
     }
     return m_last_sample;
 }
@@ -275,7 +266,7 @@ const std::vector<uint32_t>& Sobol::getLastSample() const {
 }
 
 void Sobol::nextImpl() {
-    const uint64_t l = GetLowestBitPos(m_seed);
+    const uint32_t l = GetLowestBitPos(m_seed);
     if (LOG_MAX < l) {
         // Seed became too large
         m_seed = 0;
@@ -283,15 +274,15 @@ void Sobol::nextImpl() {
         m_seed++;
     }
 
-    for (uint64_t i = 0; i < DIM; i++) {
-        uint64_t s = m_last_q[i] * N_SAMPLES_2BASE[i] / RECIPD_DENOM;
-        m_last_sample[i] = static_cast<uint32_t>(s);
-        m_last_q[i] ^= V_GRID[i][l];
+    for (uint32_t i = 1; i < DIM + 1; i++) {
+        uint32_t s = m_last_q[i - 1] >> (LOG_MAX + 1 - N_SAMPLES_SHIFT[i - 1]);
+        m_last_sample[i - 1] = s;
+        m_last_q[i - 1] ^= V_GRID[i - 1][l - 1];
     }
 }
 
 bool Sobol::isValidSample() {
-    for (uint64_t i = 0; i < DIM; i++) {
+    for (uint32_t i = 0; i < DIM; i++) {
         if (N_SAMPLES[i] <= m_last_sample[i]) {
             return false;
         }
